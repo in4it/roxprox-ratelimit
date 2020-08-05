@@ -17,9 +17,8 @@ import (
 	config "github.com/in4it/roxprox-ratelimit/pkg/config/ratelimit"
 )
 
-const cacheMbSizeDefault = 512
+const CacheMbSizeDefault = 512
 const expiry = 60
-const limit = 5
 
 var (
 	DebugLogger   *log.Logger
@@ -35,17 +34,12 @@ func initLoggers() {
 	ErrorLogger = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-func newRateLimitService(cacheMbSize int, rules []config.RateLimitRule) *Service {
+func NewRateLimitService(cacheMbSize int) *Service {
 	initLoggers()
 
-	rulesIndex := make(map[string]int)
-	for k, rule := range rules {
-		rulesIndex[rule.Name] = k
-	}
-
 	r := &Service{
-		rules:      rules,
-		rulesIndex: rulesIndex,
+		rules:      []config.RateLimitRule{},
+		rulesIndex: make(map[string]int),
 	}
 
 	cacheSize := cacheMbSize * 1024 * 1024
@@ -62,6 +56,22 @@ type Service struct {
 	rules      []config.RateLimitRule
 	rulesIndex map[string]int
 	startvalue []byte
+	version    int64
+}
+
+func (r *Service) PutRules(newRules []config.RateLimitRule) {
+	for k, newRule := range newRules {
+		if _, ok := r.rulesIndex[newRule.Name]; ok {
+			r.rules[k] = newRule
+		} else {
+			r.rules = append(r.rules, newRule)
+			r.rulesIndex[newRule.Name] = len(r.rules) - 1
+		}
+	}
+	r.version++
+}
+func (r *Service) GetVersion() int64 {
+	return r.version
 }
 
 //ShouldRateLimit is triggered for every request. This function determines whether to rate limit the request or not
@@ -123,6 +133,7 @@ func (r *Service) incrementValue(key []byte, curValue uint64) error {
 	}
 	return nil
 }
+
 func handleError(err error) (*ratelimit.RateLimitResponse, error) {
 	ErrorLogger.Printf("%s", err)
 	return &ratelimit.RateLimitResponse{

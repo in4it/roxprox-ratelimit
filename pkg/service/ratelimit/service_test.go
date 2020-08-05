@@ -36,7 +36,8 @@ func TestRateLimit(t *testing.T) {
 			RequestPerUnit: "2",
 		},
 	}
-	r := newRateLimitService(cacheMbSizeDefault, rules)
+	r := NewRateLimitService(CacheMbSizeDefault)
+	r.PutRules(rules)
 	ctx := context.Background()
 	req := &ratelimit.RateLimitRequest{
 		Domain: "testdomain",
@@ -96,7 +97,8 @@ func TestRateLimitPerf(t *testing.T) {
 			RequestPerUnit: "100",
 		},
 	}
-	r := newRateLimitService(cacheMbSizeDefault, rules)
+	r := NewRateLimitService(CacheMbSizeDefault)
+	r.PutRules(rules)
 	ctx := context.Background()
 	req := &ratelimit.RateLimitRequest{
 		Domain: "testdomain",

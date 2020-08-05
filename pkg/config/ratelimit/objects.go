@@ -7,6 +7,7 @@ import (
 //Storage expects a ListObject() that returns api.Objects
 type Storage interface {
 	ListObjects() ([]api.Object, error)
+	GetObject(name string) ([]api.Object, error)
 }
 
 func GetRateLimitRules(s Storage) ([]RateLimitRule, error) {
@@ -19,13 +20,30 @@ func GetRateLimitRules(s Storage) ([]RateLimitRule, error) {
 
 	for _, object := range objects {
 		if object.Kind == "rateLimit" {
-			rateLimitObject := object.Data.(api.RateLimit)
-			rateLimitRules = append(rateLimitRules, RateLimitRule{
-				Name:           rateLimitObject.Metadata.Name,
-				RequestPerUnit: rateLimitObject.Spec.RequestPerUnit,
-				Unit:           rateLimitObject.Spec.Unit,
-			})
+			rateLimitRules = append(rateLimitRules, getRateLimitObject(object.Data.(api.RateLimit)))
 		}
 	}
 	return rateLimitRules, nil
+}
+func GetRateLimitRule(s Storage, filename string) ([]RateLimitRule, error) {
+	var rateLimitRules []RateLimitRule
+
+	objects, err := s.GetObject(filename)
+	if err != nil {
+		return rateLimitRules, err
+	}
+	for _, object := range objects {
+		if object.Kind == "rateLimit" {
+			rateLimitRules = append(rateLimitRules, getRateLimitObject(object.Data.(api.RateLimit)))
+		}
+	}
+	return rateLimitRules, nil
+}
+
+func getRateLimitObject(object api.RateLimit) RateLimitRule {
+	return RateLimitRule{
+		Name:           object.Metadata.Name,
+		RequestPerUnit: object.Spec.RequestPerUnit,
+		Unit:           object.Spec.Unit,
+	}
 }
