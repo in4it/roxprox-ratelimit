@@ -112,6 +112,7 @@ func receiveConfigUpdates(s config.Storage, ratelimitService *ratelimit.Service,
 				if err != nil {
 					fmt.Printf("Error fetching new object: %s", v.Filename)
 				}
+				log.Printf("%d new rules loaded\n", len(rules))
 				ratelimitService.PutRules(rules)
 			}
 		}
