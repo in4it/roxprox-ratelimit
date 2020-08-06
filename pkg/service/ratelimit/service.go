@@ -78,7 +78,10 @@ func (r *Service) ShouldRateLimit(ctx context.Context, req *ratelimit.RateLimitR
 	debugLogger(fmt.Sprintf("Req: %+v", req))
 	identifier, descriptorKey := extractDescriptorsToString(req.Descriptors)
 	if _, ok := r.rulesIndex[identifier]; !ok {
-		WarningLogger.Printf("Identifier not found in rules: %s (descriptorKey: %s)", identifier, descriptorKey)
+		WarningLogger.Printf("Not enforcing ratelimit. Identifier not found in rules: %s (descriptorKey: %s)", identifier, descriptorKey)
+		return &ratelimit.RateLimitResponse{
+			OverallCode: ratelimit.RateLimitResponse_OK,
+		}, nil
 	}
 
 	bucket, expireInSeconds, err := getBucket(r.rules[r.rulesIndex[identifier]].Unit)
