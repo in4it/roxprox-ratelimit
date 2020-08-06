@@ -47,6 +47,8 @@ github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+
 github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/in4it/roxprox v0.0.0-20200805070617-823a2c4fe46e h1:IZfqR4UKsiciXauajwkDRVXoeA18/9eayJhn5emdEb8=
 github.com/in4it/roxprox v0.0.0-20200805070617-823a2c4fe46e/go.mod h1:ZREdkg/sFz9Rc/o472LDbH/MhfcHv7B0YnFBebKD2g0=
+github.com/in4it/roxprox v0.0.0-20200806121750-b56040078c71 h1:5+cUOoD8Din0iDwAPgKQ/6PggTY/VaHpR27emx+q1Wc=
+github.com/in4it/roxprox v0.0.0-20200806121750-b56040078c71/go.mod h1:t5mNx2gAkg4ed1v74J2U5FB4d8MF2V08xKjzcobl+Go=
 github.com/jmespath/go-jmespath v0.3.0 h1:OS12ieG61fsCg5+qLJ+SsW9NicxNkg3b25OyT2yCeUc=
 github.com/jmespath/go-jmespath v0.3.0/go.mod h1:9QtRXoHjLGCJ5IBSaohpXITPlowMeeYCZ7fLUTSywik=
 github.com/juju/loggo v0.0.0-20200526014432-9ce3a2e09b5e h1:FdDd7bdI6cjq5vaoYlK1mfQYfF9sF2VZw8VEZMsl5t8=
