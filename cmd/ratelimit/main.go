@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	config "github.com/in4it/roxprox-ratelimit/pkg/config/ratelimit"
 	"github.com/in4it/roxprox-ratelimit/pkg/service/ratelimit"
@@ -84,7 +85,15 @@ func initRateLimitService(s config.Storage) *ratelimit.Service {
 		log.Printf("%d rules loaded\n", len(rules))
 	}
 	// initialize ratelimit service
-	ratelimitService := ratelimit.NewRateLimitService(ratelimit.CacheMbSizeDefault)
+	cacheSizeMb := ratelimit.CacheMbSizeDefault
+	if os.Getenv("CACHE_SIZE_MB") != "" {
+		cacheSizeMb, err = strconv.Atoi(os.Getenv("CACHE_SIZE_MB"))
+		if err != nil {
+			fmt.Printf("Couldn't parse CACHE_SIZE_MB. Unknown integer value: %s. Using default", os.Getenv("CACHE_SIZE_MB"))
+			cacheSizeMb = ratelimit.CacheMbSizeDefault
+		}
+	}
+	ratelimitService := ratelimit.NewRateLimitService(cacheSizeMb)
 
 	// put initial rules
 	ratelimitService.PutRules(rules)

@@ -18,7 +18,6 @@ import (
 )
 
 const CacheMbSizeDefault = 512
-const expiry = 60
 
 var (
 	DebugLogger   *log.Logger
@@ -82,14 +81,14 @@ func (r *Service) ShouldRateLimit(ctx context.Context, req *ratelimit.RateLimitR
 		WarningLogger.Printf("Identifier not found in rules: %s (descriptorKey: %s)", identifier, descriptorKey)
 	}
 
-	bucket, err := getBucket(r.rules[r.rulesIndex[identifier]].Unit)
+	bucket, expireInSeconds, err := getBucket(r.rules[r.rulesIndex[identifier]].Unit)
 	if err != nil {
 		return handleError(err)
 	}
 
 	key := []byte(req.Domain + ":" + descriptorKey + ":" + bucket)
 
-	curValue, err := r.cache.GetOrSet(key, r.startvalue, expiry)
+	curValue, err := r.cache.GetOrSet(key, r.startvalue, expireInSeconds)
 	if err != nil {
 		return handleError(err)
 	}
@@ -113,7 +112,7 @@ func (r *Service) ShouldRateLimit(ctx context.Context, req *ratelimit.RateLimitR
 		}, nil
 	}
 
-	if err = r.incrementValue(key, curValueInt64); err != nil {
+	if err = r.incrementValue(key, curValueInt64, expireInSeconds); err != nil {
 		return handleError(err)
 	}
 
@@ -124,10 +123,10 @@ func (r *Service) ShouldRateLimit(ctx context.Context, req *ratelimit.RateLimitR
 	}, nil
 }
 
-func (r *Service) incrementValue(key []byte, curValue uint64) error {
+func (r *Service) incrementValue(key []byte, curValue uint64, expireInSeconds int) error {
 	newValue := make([]byte, 8)
 	binary.LittleEndian.PutUint64(newValue, curValue+1)
-	err := r.cache.Set(key, newValue, expiry)
+	err := r.cache.Set(key, newValue, expireInSeconds)
 	if err != nil {
 		return err
 	}
@@ -141,19 +140,19 @@ func handleError(err error) (*ratelimit.RateLimitResponse, error) {
 	}, err
 }
 
-func getBucket(unit string) (string, error) {
+func getBucket(unit string) (string, int, error) {
 	t := time.Now()
 	switch strings.ToLower(unit) {
 	case "second":
-		return t.Format("20060102T15:04:05"), nil
+		return t.Format("20060102T15:04:05"), 1, nil
 	case "minute":
-		return t.Format("20060102T15:04"), nil
+		return t.Format("20060102T15:04"), 60, nil
 	case "hour":
-		return t.Format("20060102T15"), nil
+		return t.Format("20060102T15"), 60 * 60, nil
 	case "day":
-		return t.Format("20060102"), nil
+		return t.Format("20060102"), 60 * 60 * 24, nil
 	default:
-		return "", fmt.Errorf("Unit type not found: %s", unit)
+		return "", 0, fmt.Errorf("Unit type not found: %s", unit)
 	}
 }
 
