@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+service Cache {
+   rpc GetCache(GetCacheRequest) returns (GetCacheReply) {}
+}
+
+message GetCacheRequest {
+}
+
+message GetCacheReply {
+   message CacheItem {
+      string key = 1;
+      string value = 2;
+   }  
+   repeated CacheItem cacheItems = 1;
+}

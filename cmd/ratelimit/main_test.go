@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"testing"
-	"time"
 
+	"github.com/in4it/roxprox-ratelimit/pkg/service/management"
 	storage "github.com/in4it/roxprox/pkg/storage"
 	"github.com/in4it/roxprox/proto/notification"
 )
@@ -19,28 +19,23 @@ func TestReceiveConfigUpdates(t *testing.T) {
 	// init rate limit service
 	ratelimitService := initRateLimitService(s)
 
-	queue := make(chan []*notification.NotificationRequest_NotificationItem)
-	go receiveConfigUpdates(s, ratelimitService, queue)
+	notificationReceiver := management.NewNotificationReceiver(s, ratelimitService)
 
-	notification := []*notification.NotificationRequest_NotificationItem{
-		{
-			Filename:  "ratelimit.yaml",
-			EventName: "ObjectCreated:Put",
+	notification := &notification.NotificationRequest{
+		NotificationItem: []*notification.NotificationRequest_NotificationItem{
+			{
+				Filename:  "ratelimit.yaml",
+				EventName: "ObjectCreated:Put",
+			},
 		},
 	}
-	queue <- notification
-	testOk := false
-	for i := 0; i < 10; i++ {
-		fmt.Printf("Waiting until version updates: version: %d\n", ratelimitService.GetVersion())
-		if ratelimitService.GetVersion() == 2 {
-			testOk = true
-			break
-		}
-		i++
-		time.Sleep(1 * time.Second)
-	}
-	if !testOk {
+
+	notificationReceiver.SendNotification(context.Background(), notification)
+
+	if ratelimitService.GetVersion() != 2 {
 		t.Errorf("Test failed, unable to update config")
 		return
+
 	}
+
 }

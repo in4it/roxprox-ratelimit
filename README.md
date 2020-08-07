@@ -21,3 +21,11 @@ Usage of ./ratelimit:
   -storage-type string
         storage type (default "local")
 ```
+
+
+# Manual build 
+
+```
+protoc -I proto/ proto/cache.proto --go_out=plugins=grpc:proto/cache
+make  # builds linux & darwin
+```

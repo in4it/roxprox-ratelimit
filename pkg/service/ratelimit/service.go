@@ -69,6 +69,18 @@ func (r *Service) PutRules(newRules []config.RateLimitRule) {
 	}
 	r.version++
 }
+func (r *Service) GetCache() map[string]string {
+	keyvalues := make(map[string]string)
+	iterator := r.cache.NewIterator()
+	for {
+		element := iterator.Next()
+		if element == nil {
+			break
+		}
+		keyvalues[printKeyWithoutAuthorization(element.Key)] = strconv.FormatUint(binary.LittleEndian.Uint64(element.Value), 10)
+	}
+	return keyvalues
+}
 func (r *Service) GetVersion() int64 {
 	return r.version
 }

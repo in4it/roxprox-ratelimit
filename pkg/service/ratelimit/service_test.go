@@ -147,3 +147,48 @@ func PrintMemUsage() {
 func bToMb(b uint64) uint64 {
 	return b / 1024 / 1024
 }
+
+func TestGetCache(t *testing.T) {
+	rules := []config.RateLimitRule{
+		{
+			Name:           "test",
+			Unit:           "Hour",
+			RequestPerUnit: "100",
+		},
+	}
+	r := NewRateLimitService(CacheMbSizeDefault)
+	r.PutRules(rules)
+	req := &ratelimit.RateLimitRequest{
+		Domain: "testdomain",
+		Descriptors: []*ratelimitExt.RateLimitDescriptor{
+			{
+				Entries: []*ratelimitExt.RateLimitDescriptor_Entry{
+					{
+						Key:   "mykey",
+						Value: "myvalue",
+					},
+					{
+						Key:   "generic_key",
+						Value: "__identifier:test",
+					},
+				},
+			},
+		},
+	}
+	_, err := r.ShouldRateLimit(context.Background(), req)
+	if err != nil {
+		t.Errorf("Error while executing shouldRateLimit: %s", err)
+		return
+	}
+	cacheItems := r.GetCache()
+	if len(cacheItems) != 1 {
+		t.Errorf("No cache items returned")
+		return
+	}
+	for _, v := range cacheItems {
+		if v != "1" {
+			t.Errorf("Cache item returned wrong value: %s", v)
+			return
+		}
+	}
+}

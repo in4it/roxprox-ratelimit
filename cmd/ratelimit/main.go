@@ -6,29 +6,32 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	config "github.com/in4it/roxprox-ratelimit/pkg/config/ratelimit"
+	"github.com/in4it/roxprox-ratelimit/pkg/service/management"
 	"github.com/in4it/roxprox-ratelimit/pkg/service/ratelimit"
-	"github.com/in4it/roxprox/pkg/management"
 	storage "github.com/in4it/roxprox/pkg/storage"
-	"github.com/in4it/roxprox/proto/notification"
+	"github.com/juju/loggo"
 )
 
-func initStorage() storage.Storage {
+func parseFlags() (storage.Storage, string) {
 	var (
-		err           error
-		loglevel      string
-		storageType   string
-		storagePath   string
-		storageBucket string
-		awsRegion     string
-		s             storage.Storage
+		err            error
+		loglevel       string
+		storageType    string
+		storagePath    string
+		storageBucket  string
+		awsRegion      string
+		managementPort string
+		s              storage.Storage
 	)
 	flag.StringVar(&loglevel, "loglevel", "INFO", "log level")
 	flag.StringVar(&storageType, "storage-type", "local", "storage type")
 	flag.StringVar(&storagePath, "storage-path", "", "storage path")
 	flag.StringVar(&storageBucket, "storage-bucket", "", "s3 storage bucket")
 	flag.StringVar(&awsRegion, "aws-region", "", "AWS region")
+	flag.StringVar(&managementPort, "management-port", "50051", "Port for the management server")
 
 	flag.Parse()
 
@@ -47,29 +50,36 @@ func initStorage() storage.Storage {
 	} else {
 		panic("unknown storage")
 	}
-	return s
+
+	// init logging
+	loglevel = strings.ToUpper(loglevel)
+
+	if loglevel == "DEBUG" || loglevel == "INFO" || loglevel == "TRACE" || loglevel == "ERROR" {
+		loggo.ConfigureLoggers(`<root>=` + loglevel)
+	} else {
+		loggo.ConfigureLoggers(`<root>=INFO`)
+	}
+	return s, managementPort
 }
 
 func main() {
-	// init storage
-	s := initStorage()
-
-	// start management server
-	notificationQueue, err := management.NewServer()
-	if err != nil {
-		fmt.Printf("Couldn't start management interface: %s\n", err)
-		os.Exit(1)
-	}
+	// init storage, parse flags
+	s, managementPort := parseFlags()
 
 	// init rate limit service
 	ratelimitService := initRateLimitService(s)
 
-	// listen for rule updates
-	go receiveConfigUpdates(s, ratelimitService, notificationQueue.GetQueue())
+	// start management server
+	notificationReceiver := management.NewNotificationReceiver(s, ratelimitService)
+	cacheReceiver := management.NewCacheReceiver(s, ratelimitService)
+	err := management.NewServer(managementPort, notificationReceiver, cacheReceiver)
+	if err != nil {
+		fmt.Printf("Couldn't start management interface: %s", err)
+		os.Exit(1)
+	}
 
 	// start grpc server with ratelimitService
 	ratelimit.StartGrpcServer(ratelimitService)
-
 }
 
 func initRateLimitService(s config.Storage) *ratelimit.Service {
@@ -99,22 +109,4 @@ func initRateLimitService(s config.Storage) *ratelimit.Service {
 	ratelimitService.PutRules(rules)
 
 	return ratelimitService
-}
-
-func receiveConfigUpdates(s config.Storage, ratelimitService *ratelimit.Service, queue chan []*notification.NotificationRequest_NotificationItem) {
-	for {
-		notifications := <-queue
-
-		for _, v := range notifications {
-			if v.EventName == "ObjectCreated:Put" {
-				// handle put object
-				rules, err := config.GetRateLimitRule(s, v.Filename)
-				if err != nil {
-					fmt.Printf("Error fetching new object: %s", v.Filename)
-				}
-				log.Printf("%d new rules loaded\n", len(rules))
-				ratelimitService.PutRules(rules)
-			}
-		}
-	}
 }
