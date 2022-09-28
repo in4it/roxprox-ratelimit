@@ -1,7 +1,7 @@
 #
 # Build go project
 #
-FROM golang:1.14-alpine as go-builder
+FROM golang:1.19-alpine as go-builder
 
 WORKDIR /roxprox-ratelimit
 
@@ -15,7 +15,7 @@ RUN apk add -u -t build-tools curl git && \
 #
 # Runtime container
 #
-FROM alpine:3.15  
+FROM alpine:3.16  
 
 WORKDIR /app
 
